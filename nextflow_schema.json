@@ -246,6 +246,24 @@
             "description": "Bisulfite libraries often require additional base pairs to be removed from the ends of the reads before alignment.\n\nIn addition to manually specifying bases to be hard-clipped, the workflow has a number of parameter presets:\n\n| Parameter  | 5' R1 Trim | 5' R2 Trim | 3' R1 Trim | 3' R2 Trim | \n|-----------------|------------|------------|------------|------------|\n| `--pbat`        | 8          | 8          | 8          | 8          |\n| `--single_cell` | 6          | 6          | 6          | 6          |\n|  `--accel`      | 10         | 15         | 10         | 10         |\n| `--zymo`        | 10         | 15         | 10         | 10         | \n\nNote that you can use the `--skip_trimming` parameter to skip trimming completely.\nFurther, `--skip_trimming_presets` disables setting any presets for hard-clipping, thereby uncoupling trimming from specific alignment modes entirely",
             "default": "",
             "properties": {
+                "adapter": {
+                    "type": "string",
+                    "description": "Custom adapter sequence for read 1.",
+                    "default": null,
+                    "fa_icon": "fas fa-ad"
+                },
+                "adapter_r2": {
+                    "type": "string",
+                    "description": "Custom adapter sequence for read 2 (paired-end only).",
+                    "default": null,
+                    "fa_icon": "fas fa-ad"
+                },
+                "stringency_trim": {
+                    "type": "integer",
+                    "description": "Overlap length required to trim adapters.",
+                    "default": null,
+                    "fa_icon": "fas fa-arrows-alt-h"
+                },
                 "clip_r1": {
                     "type": "integer",
                     "description": "Trim bases from the 5' end of read 1 (or single-end reads).",
@@ -274,6 +292,11 @@
                     "type": "integer",
                     "default": 0,
                     "description": "Trim bases below this quality value from the 3' end of the read, ignoring high-quality G bases"
+                },
+                "quality_trim": {
+                    "type": "integer",
+                    "default": 20,
+                    "description": "Trim low-quality bases from the 3' end of the read below this quality value."
                 },
                 "length_trim": {
                     "type": "integer",
