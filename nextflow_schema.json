@@ -211,6 +211,35 @@
             },
             "fa_icon": "fas fa-prescription-bottle"
         },
+        "umi_trimming": {
+            "title": "UMI Trimming Options",
+            "type": "object",
+            "description": "UMI trimming configurations",
+            "default": "",
+            "fa_icon": "fas fa-chart-pie",
+            "properties": {
+                "extract_method": {
+                    "type": "string",
+                    "description": "Method for UMI extraction.",
+                    "default": "regex",
+                    "enum": ["regex", "string"],
+                    "fa_icon": "fas fa-code-branch",
+                    "help_text": "Specify the method used for UMI extraction. 'regex' allows for complex patterns using regular expressions, while 'string' uses a simpler string matching approach."
+                },
+                "bc_pattern": {
+                    "type": "string",
+                    "description": "UMI barcode pattern for read 1.",
+                    "default": "default",
+                    "fa_icon": "fas fa-barcode"
+                },
+                "bc_pattern2": {
+                    "type": "string",
+                    "description": "UMI barcode pattern for read 2 (paired-end only).",
+                    "default": "default",
+                    "fa_icon": "fas fa-barcode"
+                }
+            }
+        },
         "adapter_trimming": {
             "title": "Adapter Trimming",
             "type": "object",
@@ -463,6 +492,11 @@
             "description": "",
             "default": "",
             "properties": {
+                "skip_umi_trimming": {
+                    "type": "boolean",
+                    "description": "Skip UMI trimming step.",
+                    "fa_icon": "fas fa-fast-forward"
+                },
                 "skip_trimming": {
                     "type": "boolean",
                     "description": "Skip read trimming.",
@@ -672,6 +706,9 @@
         },
         {
             "$ref": "#/$defs/special_library_types"
+        },
+        {
+            "$ref": "#/$defs/umi_trimming"
         },
         {
             "$ref": "#/$defs/adapter_trimming"

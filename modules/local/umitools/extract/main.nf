@@ -24,8 +24,7 @@ process UMITOOLS_EXTRACT {
         """
         [ ! -f  ${prefix}_UMI.fastq.gz ] && ln -s ${reads} ${prefix}_UMI.fastq.gz
         umi_tools extract \\
-            --extract-method=regex --quality-encoding=phred33 \\
-            --bc-pattern='^(?P<umi_1>.{3})(?P<discard_1>.{2}).*' \\
+            ${args} \\
             --stdin=${prefix}_UMI.fastq.gz \\
             --stdout=${prefix}_umi_trimmed.fastq.gz
 
@@ -40,9 +39,7 @@ process UMITOOLS_EXTRACT {
         [ ! -f  ${prefix}_UMI_R1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_UMI_R1.fastq.gz
         [ ! -f  ${prefix}_UMI_R2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_UMI_R2.fastq.gz
         umi_tools extract \\
-            --extract-method=regex --quality-encoding=phred33 \\
-            --bc-pattern='^(?P<umi_1>.{3})(?P<discard_1>.{2}).*' \\
-            --bc-pattern2='^(?P<umi_1>.{3})(?P<discard_1>.{2}).*' \\
+            ${args} \\
             --stdin=${prefix}_UMI_R1.fastq.gz --read2-in=${prefix}_UMI_R2.fastq.gz \\
             --stdout=${prefix}_R1_umi_trimmed.fastq.gz --read2-out=${prefix}_R2_umi_trimmed.fastq.gz
 
