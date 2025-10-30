@@ -1,0 +1,55 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: umitools_extract
+description: Extract Unique Molecular Identifiers (UMIs) from sequencing reads using UMI-tools.
+keywords:
+- UMI
+- trimming
+tools:
+- umitools:
+    description: |
+      A tool for extracting Unique Molecular Identifiers (UMIs) from sequencing reads, then adding the UMI
+      sequence to the read name for downstream processing. Sample barcodes are left intact. 
+    homepage: https://umi-tools.readthedocs.io/en/latest
+    documentation: https://umi-tools.readthedocs.io/en/latest
+    tool_dev_url: https://github.com/CGATOxford/UMI-tools
+    doi: 10.1101/gr.209601.116
+    licence: ['MIT']
+    identifier: null
+
+input:
+- - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. `[ id:'sample1' ]`
+  - reads:
+        type: file
+        description: |
+          List of input FastQ files of size 1 and 2 for single-end and paired-end data,
+          respectively.
+        ontologies: []
+
+output:
+  reads:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1' ]`
+    - "*.fastq.gz":
+        type: map
+        description: |
+          Groovy Map containing UMI-trimmed FastQ file(s)
+        pattern: "*.fastq.gz"
+  versions:
+  - versions.yml:
+      type: file
+      description: File containing software versions
+      pattern: "versions.yml"
+      ontologies:
+      - edam: "http://edamontology.org/format_3750"     # YAML
+
+authors:
+- "@LynnHenrotte"
+maintainers:
+- "@LynnHenrotte"

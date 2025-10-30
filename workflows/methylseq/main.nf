@@ -6,6 +6,7 @@
 
 include { paramsSummaryMap           } from 'plugin/nf-schema'
 include { FASTQC                     } from '../../modules/nf-core/fastqc/main'
+include { UMITOOLS_EXTRACT           } from '../../modules/local/umitools/extract/main'
 include { TRIMGALORE                 } from '../../modules/nf-core/trimgalore/main'
 include { QUALIMAP_BAMQC             } from '../../modules/nf-core/qualimap/bamqc/main'
 include { PRESEQ_LCEXTRAP            } from '../../modules/nf-core/preseq/lcextrap/main'
@@ -41,6 +42,7 @@ workflow METHYLSEQ {
     ch_fastqc_html   = Channel.empty()
     ch_fastqc_zip    = Channel.empty()
     ch_reads         = Channel.empty()
+    ch_reads_trimmed = Channel.empty()
     ch_bam           = Channel.empty()
     ch_bai           = Channel.empty()
     ch_bedgraph      = Channel.empty()
@@ -85,16 +87,29 @@ workflow METHYLSEQ {
     }
 
     //
+    // MODULE: Run UMI-tools extract
+    //
+    if (!params.skip_umi_trimming) {
+        UMITOOLS_EXTRACT (
+            ch_fastq
+        )
+        ch_reads    = UMITOOLS_EXTRACT.out.reads
+        ch_versions = ch_versions.mix(UMITOOLS_EXTRACT.out.versions)
+    } else {
+       ch_reads    = ch_fastq
+    }
+
+    //
     // MODULE: Run TrimGalore!
     //
     if (!params.skip_trimming) {
-        TRIMGALORE(
-            ch_fastq
+        TRIMGALORE (
+            ch_reads
         )
-        ch_reads    = TRIMGALORE.out.reads
-        ch_versions = ch_versions.mix(TRIMGALORE.out.versions)
+        ch_reads_trimmed = TRIMGALORE.out.reads
+        ch_versions      = ch_versions.mix(TRIMGALORE.out.versions)
     } else {
-        ch_reads    = ch_fastq
+        ch_reads_trimmed = ch_reads
     }
 
     //
@@ -106,7 +121,7 @@ workflow METHYLSEQ {
         //
         // Run Bismark alignment + downstream processing
         //
-        ch_bismark_inputs = ch_reads
+        ch_bismark_inputs = ch_reads_trimmed
             .combine(ch_fasta)
             .combine(ch_bismark_index)
             .multiMap { meta, reads, meta_fasta, fasta, meta_bismark, bismark_index ->
@@ -131,7 +146,7 @@ workflow METHYLSEQ {
     // Aligner: bwameth
     else if ( params.aligner == 'bwameth' ){
 
-        ch_bwameth_inputs = ch_reads
+        ch_bwameth_inputs = ch_reads_trimmed
             .combine(ch_fasta)
             .combine(ch_fasta_index)
             .combine(ch_bwameth_index)
