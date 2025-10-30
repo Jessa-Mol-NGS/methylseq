@@ -492,11 +492,6 @@
             "description": "",
             "default": "",
             "properties": {
-                "skip_umi_trimming": {
-                    "type": "boolean",
-                    "description": "Skip UMI trimming step.",
-                    "fa_icon": "fas fa-fast-forward"
-                },
                 "skip_trimming": {
                     "type": "boolean",
                     "description": "Skip read trimming.",
@@ -540,6 +535,11 @@
                 "run_targeted_sequencing": {
                     "type": "boolean",
                     "description": "Run advanced analysis for targeted methylation kits with enrichment of specific regions",
+                    "fa_icon": "fas fa-fast-forward"
+                },
+                "run_umi_deduplication": {
+                    "type": "boolean",
+                    "description": "Run UMI-based deduplication using UMI-tools for extraction and Bismark for deduplication",
                     "fa_icon": "fas fa-fast-forward"
                 }
             },

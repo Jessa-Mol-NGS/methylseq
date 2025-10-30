@@ -89,7 +89,7 @@ workflow METHYLSEQ {
     //
     // MODULE: Run UMI-tools extract
     //
-    if (!params.skip_umi_trimming) {
+    if (params.run_umi_deduplication) {
         UMITOOLS_EXTRACT (
             ch_fastq
         )

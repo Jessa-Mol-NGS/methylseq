@@ -22,10 +22,10 @@ process UMITOOLS_EXTRACT {
     def prefix = task.ext.prefix ?: "${meta.id}"
     if (meta.single_end) {
         """
-        [ ! -f  ${prefix}_UMI.fastq.gz ] && ln -s ${reads} ${prefix}_UMI.fastq.gz
+        seqkit replace -p " " -r "_" ${reads} | gzip > ${prefix}_space_removed.fastq.gz
         umi_tools extract \\
             ${args} \\
-            --stdin=${prefix}_UMI.fastq.gz \\
+            --stdin=${prefix}_space_removed.fastq.gz \\
             --stdout=${prefix}_umi_trimmed.fastq.gz
 
         cat <<-END_VERSIONS > versions.yml
@@ -36,11 +36,11 @@ process UMITOOLS_EXTRACT {
     }
     else {
         """
-        [ ! -f  ${prefix}_UMI_R1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_UMI_R1.fastq.gz
-        [ ! -f  ${prefix}_UMI_R2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_UMI_R2.fastq.gz
+        seqkit replace -p " " -r "_" ${reads[0]} | gzip > ${prefix}_R1_space_removed.fastq.gz
+        seqkit replace -p " " -r "_" ${reads[1]} | gzip > ${prefix}_R2_space_removed.fastq.gz
         umi_tools extract \\
             ${args} \\
-            --stdin=${prefix}_UMI_R1.fastq.gz --read2-in=${prefix}_UMI_R2.fastq.gz \\
+            --stdin=${prefix}_R1_space_removed.fastq.gz --read2-in=${prefix}_R2_space_removed.fastq.gz \\
             --stdout=${prefix}_R1_umi_trimmed.fastq.gz --read2-out=${prefix}_R2_umi_trimmed.fastq.gz
 
         cat <<-END_VERSIONS > versions.yml
