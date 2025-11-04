@@ -5,4 +5,3 @@ channels:
   - bioconda
 dependencies:
   - "bioconda::umi_tools=1.1.6"
-  - "bioconda::seqkit=2.10.1"

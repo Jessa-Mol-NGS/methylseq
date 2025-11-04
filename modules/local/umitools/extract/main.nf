@@ -22,30 +22,33 @@ process UMITOOLS_EXTRACT {
     def prefix = task.ext.prefix ?: "${meta.id}"
     if (meta.single_end) {
         """
-        seqkit replace -p " " -r "_" ${reads} | gzip > ${prefix}_space_removed.fastq.gz
+        [ ! -f  ${prefix}_UMI.fastq.gz ] && ln -s ${reads} ${prefix}_UMI.fastq.gz
         umi_tools extract \\
             ${args} \\
-            --stdin=${prefix}_space_removed.fastq.gz \\
-            --stdout=${prefix}_umi_trimmed.fastq.gz
+            --stdin=${prefix}_UMI.fastq.gz \\
+            --stdout=${prefix}_temp.fastq
+        sed -r '1~4 s/^(@.*)-([ACTGN]{3})(.*)/\\1 \\3:\\2/' ${prefix}_temp.fastq | gzip > ${prefix}_umi_trimmed.fastq.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            umitools: \$(umitools --version)
+            umitools: \$(echo \$(umi_tools --version) | sed 's/^.*: //')
         END_VERSIONS
         """
     }
     else {
         """
-        seqkit replace -p " " -r "_" ${reads[0]} | gzip > ${prefix}_R1_space_removed.fastq.gz
-        seqkit replace -p " " -r "_" ${reads[1]} | gzip > ${prefix}_R2_space_removed.fastq.gz
+        [ ! -f  ${prefix}_UMI_R1.fastq.gz ] && ln -s ${reads[0]} ${prefix}_UMI_R1.fastq.gz
+        [ ! -f  ${prefix}_UMI_R2.fastq.gz ] && ln -s ${reads[1]} ${prefix}_UMI_R2.fastq.gz
         umi_tools extract \\
             ${args} \\
-            --stdin=${prefix}_R1_space_removed.fastq.gz --read2-in=${prefix}_R2_space_removed.fastq.gz \\
-            --stdout=${prefix}_R1_umi_trimmed.fastq.gz --read2-out=${prefix}_R2_umi_trimmed.fastq.gz
+            --stdin=${prefix}_UMI_R1.fastq.gz --read2-in=${prefix}_UMI_R2.fastq.gz \\
+            --stdout=${prefix}_R1_temp.fastq --read2-out=${prefix}_R2_temp.fastq
+        sed -r '1~4 s/^(@.*)-([ACTGN]{6})(.*)/\\1\\3:\\2/' ${prefix}_R1_temp.fastq | gzip > ${prefix}_R1_umi_trimmed.fastq.gz
+        sed -r '1~4 s/^(@.*)-([ACTGN]{6})(.*)/\\1\\3:\\2/' ${prefix}_R2_temp.fastq | gzip > ${prefix}_R2_umi_trimmed.fastq.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":
-            umitools: \$(umitools --version)
+            umitools: \$(echo \$(umi_tools --version) | sed 's/^.*: //')
         END_VERSIONS
         """
     }
@@ -63,7 +66,7 @@ process UMITOOLS_EXTRACT {
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":
-        umitools: \$(umitools --version)
+        umitools: \$(echo \$(umi_tools --version) | sed 's/^.*: //')
     END_VERSIONS
     """
 }
