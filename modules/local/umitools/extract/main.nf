@@ -4,8 +4,8 @@ process UMITOOLS_EXTRACT {
 
     conda "${moduleDir}/environment.yml"
     container "${ workflow.containerEngine == 'singularity' && !task.ext.singularity_pull_docker_container ?
-        'https://depot.galaxyproject.org/singularity/umi_tools:1.1.6--py39hbcbf7aa_0':
-        'biocontainers/umi_tools:1.1.6--py39hbcbf7aa_0' }"
+        'https://community-cr-prod.seqera.io/docker/registry/v2/blobs/sha256/11/1130cd4b77f15ac6f2e59fdf60181930cc8330ff0493c4bb91538acdbaa29e0f/datall':
+        'community.wave.seqera.io/library/umi_tools_sed:cf97d0dacd259c0a' }"
 
     input:
     tuple val(meta), path(reads)
@@ -27,7 +27,7 @@ process UMITOOLS_EXTRACT {
             ${args} \\
             --stdin=${prefix}_UMI.fastq.gz \\
             --stdout=${prefix}_temp.fastq
-        sed -r '1~4 s/^(@.*)-([ACTGN]{3})(.*)/\\1 \\3:\\2/' ${prefix}_temp.fastq | gzip > ${prefix}_umi_trimmed.fastq.gz
+        sed -r '1~4 s/^(@.*)-([ACTGN]{3})(.*)/\\1\\3:\\2/' ${prefix}_temp.fastq | gzip > ${prefix}_umi_trimmed.fastq.gz
 
         cat <<-END_VERSIONS > versions.yml
         "${task.process}":

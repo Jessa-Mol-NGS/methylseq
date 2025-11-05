@@ -135,7 +135,8 @@ workflow METHYLSEQ {
             ch_bismark_inputs.fasta,
             ch_bismark_inputs.bismark_index,
             params.skip_deduplication || params.rrbs,
-            params.cytosine_report || params.nomeseq
+            params.cytosine_report || params.nomeseq,
+            params.run_fragmentomics
         )
         ch_bam         = FASTQ_ALIGN_DEDUP_BISMARK.out.bam
         ch_bai         = FASTQ_ALIGN_DEDUP_BISMARK.out.bai
@@ -163,6 +164,7 @@ workflow METHYLSEQ {
             ch_bwameth_inputs.fasta_index,
             ch_bwameth_inputs.bwameth_index,
             params.skip_deduplication || params.rrbs,
+            params.run_fragmentomics,
             workflow.profile.tokenize(',').intersect(['gpu']).size() >= 1
         )
         ch_bam         = FASTQ_ALIGN_DEDUP_BWAMETH.out.bam
@@ -297,7 +299,7 @@ workflow METHYLSEQ {
     bai            = ch_bai                      // channel: [ val(meta), path(bai) ]
     qualimap       = ch_qualimap                 // channel: [ val(meta), path(qualimap) ]
     preseq         = ch_preseq                   // channel: [ val(meta), path(preseq) ]
-    multiqc_report = ch_multiqc_report            // channel: [ path(multiqc_report.html )  ]
+    multiqc_report = ch_multiqc_report           // channel: [ path(multiqc_report.html )  ]
     versions       = ch_versions                 // channel: [ path(versions.yml) ]
 }
 

@@ -15,6 +15,7 @@ workflow FASTQ_ALIGN_DEDUP_BISMARK {
     ch_bismark_index     // channel: [ val(meta), [ bismark index ] ]
     skip_deduplication   // boolean: whether to deduplicate alignments
     cytosine_report      // boolean: whether the run coverage2cytosine
+    run_fragmentomics    // boolean: whether to run fragmentomics pipeline (skip methylation extraction)
 
     main:
     ch_alignments                 = Channel.empty()
@@ -74,68 +75,73 @@ workflow FASTQ_ALIGN_DEDUP_BISMARK {
     ch_versions = ch_versions.mix(SAMTOOLS_INDEX.out.versions)
 
     /*
-     * Run bismark_methylation_extractor
-     */
-    BISMARK_METHYLATIONEXTRACTOR (
-        ch_alignments,
-        ch_bismark_index
-    )
-    ch_methylation_bedgraph = BISMARK_METHYLATIONEXTRACTOR.out.bedgraph
-    ch_methylation_calls    = BISMARK_METHYLATIONEXTRACTOR.out.methylation_calls
-    ch_methylation_coverage = BISMARK_METHYLATIONEXTRACTOR.out.coverage
-    ch_methylation_report   = BISMARK_METHYLATIONEXTRACTOR.out.report
-    ch_methylation_mbias    = BISMARK_METHYLATIONEXTRACTOR.out.mbias
-    ch_versions             = ch_versions.mix(BISMARK_METHYLATIONEXTRACTOR.out.versions)
-
-    /*
-     * Run bismark coverage2cytosine
-     */
-    if (cytosine_report) {
-        BISMARK_COVERAGE2CYTOSINE (
-            ch_methylation_coverage,
-            ch_fasta,
+    * Only execute methylation extraction steps if fragmentomics is not requested
+    */
+    if (!run_fragmentomics) {
+        /*
+        * Run bismark_methylation_extractor
+        */
+        BISMARK_METHYLATIONEXTRACTOR (
+            ch_alignments,
             ch_bismark_index
         )
-        ch_coverage2cytosine_coverage = BISMARK_COVERAGE2CYTOSINE.out.coverage
-        ch_coverage2cytosine_report   = BISMARK_COVERAGE2CYTOSINE.out.report
-        ch_coverage2cytosine_summary  = BISMARK_COVERAGE2CYTOSINE.out.summary
-        ch_versions                   = ch_versions.mix(BISMARK_COVERAGE2CYTOSINE.out.versions)
+        ch_methylation_bedgraph = BISMARK_METHYLATIONEXTRACTOR.out.bedgraph
+        ch_methylation_calls    = BISMARK_METHYLATIONEXTRACTOR.out.methylation_calls
+        ch_methylation_coverage = BISMARK_METHYLATIONEXTRACTOR.out.coverage
+        ch_methylation_report   = BISMARK_METHYLATIONEXTRACTOR.out.report
+        ch_methylation_mbias    = BISMARK_METHYLATIONEXTRACTOR.out.mbias
+        ch_versions             = ch_versions.mix(BISMARK_METHYLATIONEXTRACTOR.out.versions)
+
+        /*
+        * Run bismark coverage2cytosine
+        */
+        if (cytosine_report) {
+            BISMARK_COVERAGE2CYTOSINE (
+                ch_methylation_coverage,
+                ch_fasta,
+                ch_bismark_index
+            )
+            ch_coverage2cytosine_coverage = BISMARK_COVERAGE2CYTOSINE.out.coverage
+            ch_coverage2cytosine_report   = BISMARK_COVERAGE2CYTOSINE.out.report
+            ch_coverage2cytosine_summary  = BISMARK_COVERAGE2CYTOSINE.out.summary
+            ch_versions                   = ch_versions.mix(BISMARK_COVERAGE2CYTOSINE.out.versions)
+        }
     }
 
     /*
-     * Generate bismark sample reports
-     */
+    * Generate bismark sample reports
+    */
     BISMARK_REPORT (
         ch_alignment_reports
-            .join(ch_methylation_report)
-            .join(ch_methylation_mbias)
+            .join(ch_methylation_report.ifEmpty([]))
+            .join(ch_methylation_mbias.ifEmpty([]))
     )
     ch_bismark_report = BISMARK_REPORT.out.report
     ch_versions       = ch_versions.mix(BISMARK_REPORT.out.versions)
-
+    
     /*
-     * Generate bismark summary report
-     */
+    * Generate bismark summary report
+    */
     BISMARK_SUMMARY (
         BISMARK_ALIGN.out.bam.collect{ meta, bam -> bam.name },
         ch_alignment_reports.collect{ meta, align_report, dedup_report -> align_report },
         ch_alignment_reports.collect{ meta, align_report, dedup_report -> dedup_report }.ifEmpty([]),
-        ch_methylation_report.collect{ meta, report -> report },
-        ch_methylation_mbias.collect{ meta, mbias -> mbias }
-    )
+        ch_methylation_report.collect{ meta, report -> report }.ifEmpty([]),
+        ch_methylation_mbias.collect{ meta, mbias -> mbias }.ifEmpty([])        
+        )
     ch_bismark_summary = BISMARK_SUMMARY.out.summary
     ch_versions        = ch_versions.mix(BISMARK_SUMMARY.out.versions)
 
-    /*
-     * Collect MultiQC inputs
-     */
+   /*
+    * Collect MultiQC inputs
+    */
     ch_multiqc_files = ch_bismark_summary
                             .mix(ch_alignment_reports.collect{ meta, align_report, dedup_report -> align_report })
                             .mix(ch_alignment_reports.collect{ meta, align_report, dedup_report -> dedup_report })
                             .mix(ch_methylation_report.collect{ meta, report -> report })
-                            .mix(ch_methylation_mbias.collect{ meta, mbias -> mbias })
-                            .mix(ch_bismark_report.collect{ meta, report -> report })
-
+                            .mix(ch_methylation_mbias.collect{ meta, mbias -> mbias }.ifEmpty([]))
+                            .mix(ch_bismark_report.collect{ meta, report -> report }.ifEmpty([]))
+    
     emit:
     bam                        = SAMTOOLS_SORT.out.bam         // channel: [ val(meta), [ bam ] ]
     bai                        = SAMTOOLS_INDEX.out.bai        // channel: [ val(meta), [ bai ] ]
@@ -151,4 +157,5 @@ workflow FASTQ_ALIGN_DEDUP_BISMARK {
     bismark_summary            = ch_bismark_summary            // channel: [ val(meta), [ summary ] ]
     multiqc                    = ch_multiqc_files              // path: *{html,txt}
     versions                   = ch_versions                   // path: *.version.txt
+
 }

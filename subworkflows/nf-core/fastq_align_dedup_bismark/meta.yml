@@ -45,6 +45,10 @@ input:
       type: boolean
       description: |
         Produce coverage2cytosine reports that relates methylation calls back to genomic cytosine contexts
+  - run_fragmentomics:
+      type: boolean
+      description: |
+        Skip methylation extraction steps for fragmentomics analysis
 output:
   - bam:
       type: file

@@ -564,6 +564,11 @@
                     "type": "boolean",
                     "description": "Run UMI-based deduplication using UMI-tools for extraction and Bismark for deduplication",
                     "fa_icon": "fas fa-fast-forward"
+                },
+                "run_fragmentomics": {
+                    "type": "boolean",
+                    "description": "Produce output relevant for fragmentomics analyses, but skip methylation calling steps",
+                    "fa_icon": "fas fa-fast-forward"
                 }
             },
             "fa_icon": "fas fa-fast-forward"
