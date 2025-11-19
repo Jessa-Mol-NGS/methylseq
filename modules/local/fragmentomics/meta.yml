@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/modules/meta-schema.json
+name: "fragmentomics"
+description: Collects fragmentomics data
+keywords:
+- fragmentomics
+- insert size
+- insert sequence
+tools:
+- "fragmentomics":
+    description: "The fragmentomics module allows extracting correctly defined insert sizes from paired-end 
+      data stored in a BAM file. In addition, this module returns the sequences of both reads, and even the
+      reconstructed insert sequence in case the reads overlap."
+
+input:
+- - meta:
+      type: map
+      description: |
+        Groovy Map containing sample information
+        e.g. `[ id:'sample1' ]`
+  - bam:
+        type: file
+        description: BAM file containing read alignments
+        pattern: "*.{bam}"
+        ontologies: []  
+
+output:
+  versions: -
+    versions.yml:
+      type: file
+      description: File containing software versions
+      pattern: versions.yml
+      ontologies:
+      - edam: http://edamontology.org/format_3750  # YAML
+authors:
+- "@LynnHenrotte"
+maintainers:
+- "@LynnHenrotte"

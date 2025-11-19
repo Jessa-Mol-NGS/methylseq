@@ -1,0 +1,88 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/nf-core/modules/master/subworkflows/yaml-schema.json
+name: "fragmentomics_align_dedup_bismark"
+description: Align BS-Seq reads to a reference genome using bismark, deduplicate and sort, then extract fragmentomics data
+keywords:
+  - bismark
+  - 3-letter genome
+  - map
+  - bisulfite
+  - bam
+  - fragmentomics
+  - insert size
+components:
+  - bismark/align
+  - bismark/deduplicate
+  - bismark/report
+  - bismark/summary
+  - samtools/sort
+  - samtools/index
+  - samtools/view
+  - fragmentomics
+input:
+  - ch_reads:
+      description: |
+        List of input FastQ files of size 1 and 2 for single-end and paired-end data,
+        respectively.
+        Structure: [ val(meta), [ path(reads) ] ]
+      pattern: "*.{fastq,fastq.gz}"
+  - ch_fasta:
+      type: file
+      description: |
+        Structure: [ val(meta), path(fasta) ]
+      pattern: "*.{fa,fa.gz}"
+  - ch_bismark_index:
+      description: |
+        Bismark genome index files
+        Structure: [ val(meta), path(index) ]
+      pattern: "BismarkIndex"
+  - skip_deduplication:
+      type: boolean
+      description: |
+        Skip deduplication of aligned reads
+output:
+  - bam:
+      type: file
+      description: |
+        Channel containing aligned or deduplicated BAM files.
+        Structure: [ val(meta), path(bam) ]
+      pattern: "*.bam"
+  - bai:
+      type: file
+      description: |
+        Channel containing aligned or deduplicated BAM index files.
+        Structure: [ val(meta), path(bam.bai) ]
+      pattern: "*.bai"
+  - bismark_report:
+      type: file
+      description: |
+        Channel containing Bismark report with mapping and methylation statistics.
+        Structure: [ val(meta), path(bismark_report.txt) ]
+      pattern: "*report.{html,txt}"
+  - bismark_summary:
+      type: file
+      description: |
+        Channel containing Bismark summary report.
+        Structure: [ val(meta), path(bismark_summary.txt) ]
+      pattern: "*report.{html,txt}"
+  - insert_sizes:
+      type: file
+      description: |
+        Channel containing extracted fragmentomics data.
+        Structure: [ val(meta), path(insert_sizes.csv.gz) ]
+      pattern: "*insert.sizes.csv.gz"
+  - multiqc:
+      type: file
+      description: |
+        Channel containing MultiQC report aggregating results across samples.
+        Structure: [ val(meta), path(multiqc_report.html) ]
+      pattern: "*.html"
+  - versions:
+      type: file
+      description: |
+        File containing software versions.
+        Structure: [ path(versions.yml) ]
+      pattern: "versions.yml"
+authors:
+  - "@LynnHenrotte"
+maintainers:
+  - "@LynnHenrotte"

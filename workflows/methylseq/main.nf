@@ -4,21 +4,22 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 */
 
-include { paramsSummaryMap           } from 'plugin/nf-schema'
-include { FASTQC                     } from '../../modules/nf-core/fastqc/main'
-include { UMITOOLS_EXTRACT           } from '../../modules/local/umitools/extract/main'
-include { TRIMGALORE                 } from '../../modules/nf-core/trimgalore/main'
-include { QUALIMAP_BAMQC             } from '../../modules/nf-core/qualimap/bamqc/main'
-include { PRESEQ_LCEXTRAP            } from '../../modules/nf-core/preseq/lcextrap/main'
-include { MULTIQC                    } from '../../modules/nf-core/multiqc/main'
-include { CAT_FASTQ                  } from '../../modules/nf-core/cat/fastq/main'
-include { FASTQ_ALIGN_DEDUP_BISMARK  } from '../../subworkflows/nf-core/fastq_align_dedup_bismark/main'
-include { FASTQ_ALIGN_DEDUP_BWAMETH  } from '../../subworkflows/nf-core/fastq_align_dedup_bwameth/main'
-include { paramsSummaryMultiqc       } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
-include { softwareVersionsToYAML     } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
-include { TARGETED_SEQUENCING        } from '../../subworkflows/local/targeted_sequencing'
-include { methodsDescriptionText     } from '../../subworkflows/local/utils_nfcore_methylseq_pipeline'
-include { validateInputSamplesheet   } from '../../subworkflows/local/utils_nfcore_methylseq_pipeline'
+include { paramsSummaryMap                  } from 'plugin/nf-schema'
+include { FASTQC                            } from '../../modules/nf-core/fastqc/main'
+include { UMITOOLS_EXTRACT                  } from '../../modules/local/umitools/extract/main'
+include { TRIMGALORE                        } from '../../modules/nf-core/trimgalore/main'
+include { QUALIMAP_BAMQC                    } from '../../modules/nf-core/qualimap/bamqc/main'
+include { PRESEQ_LCEXTRAP                   } from '../../modules/nf-core/preseq/lcextrap/main'
+include { MULTIQC                           } from '../../modules/nf-core/multiqc/main'
+include { CAT_FASTQ                         } from '../../modules/nf-core/cat/fastq/main'
+include { FASTQ_ALIGN_DEDUP_BISMARK         } from '../../subworkflows/nf-core/fastq_align_dedup_bismark/main'
+include { FASTQ_ALIGN_DEDUP_BWAMETH         } from '../../subworkflows/nf-core/fastq_align_dedup_bwameth/main'
+include { FRAGMENTOMICS_ALIGN_DEDUP_BISMARK } from '../../subworkflows/local/fragmentomics_align_dedup_bismark/main'
+include { paramsSummaryMultiqc              } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
+include { softwareVersionsToYAML            } from '../../subworkflows/nf-core/utils_nfcore_pipeline'
+include { TARGETED_SEQUENCING               } from '../../subworkflows/local/targeted_sequencing'
+include { methodsDescriptionText            } from '../../subworkflows/local/utils_nfcore_methylseq_pipeline'
+include { validateInputSamplesheet          } from '../../subworkflows/local/utils_nfcore_methylseq_pipeline'
 
 /*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -89,7 +90,7 @@ workflow METHYLSEQ {
     //
     // MODULE: Run UMI-tools extract
     //
-    if (params.run_umi_deduplication) {
+    if (params.run_umi_extraction) {
         UMITOOLS_EXTRACT (
             ch_fastq
         )
@@ -113,14 +114,9 @@ workflow METHYLSEQ {
     }
 
     //
-    // SUBWORKFLOW: Align reads, deduplicate and extract methylation with Bismark
+    // SUBWORKFLOW: Align reads and deduplicate with Bismark, then extract fragmentomics data
     //
-
-    // Aligner: bismark or bismark_hisat
-    if ( params.aligner =~ /bismark/ ) {
-        //
-        // Run Bismark alignment + downstream processing
-        //
+    if (params.run_fragmentomics) {
         ch_bismark_inputs = ch_reads_trimmed
             .combine(ch_fasta)
             .combine(ch_bismark_index)
@@ -129,54 +125,84 @@ workflow METHYLSEQ {
                 fasta: [ meta_fasta, fasta ]
                 bismark_index: [ meta_bismark, bismark_index ]
             }
-
-        FASTQ_ALIGN_DEDUP_BISMARK (
+        
+        FRAGMENTOMICS_ALIGN_DEDUP_BISMARK (
             ch_bismark_inputs.reads,
             ch_bismark_inputs.fasta,
             ch_bismark_inputs.bismark_index,
             params.skip_deduplication || params.rrbs,
-            params.cytosine_report || params.nomeseq,
-            params.run_fragmentomics
         )
-        ch_bam         = FASTQ_ALIGN_DEDUP_BISMARK.out.bam
-        ch_bai         = FASTQ_ALIGN_DEDUP_BISMARK.out.bai
-        ch_bedgraph    = FASTQ_ALIGN_DEDUP_BISMARK.out.methylation_bedgraph
-        ch_aligner_mqc = FASTQ_ALIGN_DEDUP_BISMARK.out.multiqc
-        ch_versions    = ch_versions.mix(FASTQ_ALIGN_DEDUP_BISMARK.out.versions)
+        ch_bam         = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.bam
+        ch_bai         = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.bai
+        ch_aligner_mqc = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.multiqc
+        ch_versions    = ch_versions.mix(FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.versions)
     }
-    // Aligner: bwameth
-    else if ( params.aligner == 'bwameth' ){
 
-        ch_bwameth_inputs = ch_reads_trimmed
-            .combine(ch_fasta)
-            .combine(ch_fasta_index)
-            .combine(ch_bwameth_index)
-            .multiMap { meta, reads, meta_fasta, fasta, meta_fasta_index, fasta_index, meta_bwameth, bwameth_index ->
-                reads: [ meta, reads ]
-                fasta: [ meta_fasta, fasta ]
-                fasta_index: [ meta_fasta_index, fasta_index ]
-                bwameth_index: [ meta_bwameth, bwameth_index ]
-            }
-
-        FASTQ_ALIGN_DEDUP_BWAMETH (
-            ch_bwameth_inputs.reads,
-            ch_bwameth_inputs.fasta,
-            ch_bwameth_inputs.fasta_index,
-            ch_bwameth_inputs.bwameth_index,
-            params.skip_deduplication || params.rrbs,
-            params.run_fragmentomics,
-            workflow.profile.tokenize(',').intersect(['gpu']).size() >= 1
-        )
-        ch_bam         = FASTQ_ALIGN_DEDUP_BWAMETH.out.bam
-        ch_bai         = FASTQ_ALIGN_DEDUP_BWAMETH.out.bai
-        ch_bedgraph    = FASTQ_ALIGN_DEDUP_BWAMETH.out.methydackel_extract_bedgraph
-        ch_aligner_mqc = FASTQ_ALIGN_DEDUP_BWAMETH.out.multiqc
-        ch_versions    = ch_versions.mix(FASTQ_ALIGN_DEDUP_BWAMETH.out.versions)
-    }
+    //
+    // SUBWORKFLOW: Align reads, deduplicate and extract methylation with Bismark
+    //
     else {
-        error "ERROR: Invalid aligner '${params.aligner}'. Valid options are: 'bismark', 'bismark_hisat', or 'bwameth'"
-    }
+        // Aligner: bismark or bismark_hisat
+        if ( params.aligner =~ /bismark/ ) {
+            //
+            // Run Bismark alignment + downstream processing
+            //
+            ch_bismark_inputs = ch_reads_trimmed
+                .combine(ch_fasta)
+                .combine(ch_bismark_index)
+                .multiMap { meta, reads, meta_fasta, fasta, meta_bismark, bismark_index ->
+                    reads: [ meta, reads ]
+                    fasta: [ meta_fasta, fasta ]
+                    bismark_index: [ meta_bismark, bismark_index ]
+                }
 
+            FASTQ_ALIGN_DEDUP_BISMARK (
+                ch_bismark_inputs.reads,
+                ch_bismark_inputs.fasta,
+                ch_bismark_inputs.bismark_index,
+                params.skip_deduplication || params.rrbs,
+                params.cytosine_report || params.nomeseq,
+                params.run_fragmentomics
+            )
+            ch_bam         = FASTQ_ALIGN_DEDUP_BISMARK.out.bam
+            ch_bai         = FASTQ_ALIGN_DEDUP_BISMARK.out.bai
+            ch_bedgraph    = FASTQ_ALIGN_DEDUP_BISMARK.out.methylation_bedgraph
+            ch_aligner_mqc = FASTQ_ALIGN_DEDUP_BISMARK.out.multiqc
+            ch_versions    = ch_versions.mix(FASTQ_ALIGN_DEDUP_BISMARK.out.versions)
+        }
+        // Aligner: bwameth
+        else if ( params.aligner == 'bwameth' ){
+
+            ch_bwameth_inputs = ch_reads_trimmed
+                .combine(ch_fasta)
+                .combine(ch_fasta_index)
+                .combine(ch_bwameth_index)
+                .multiMap { meta, reads, meta_fasta, fasta, meta_fasta_index, fasta_index, meta_bwameth, bwameth_index ->
+                    reads: [ meta, reads ]
+                    fasta: [ meta_fasta, fasta ]
+                    fasta_index: [ meta_fasta_index, fasta_index ]
+                    bwameth_index: [ meta_bwameth, bwameth_index ]
+                }
+
+            FASTQ_ALIGN_DEDUP_BWAMETH (
+                ch_bwameth_inputs.reads,
+                ch_bwameth_inputs.fasta,
+                ch_bwameth_inputs.fasta_index,
+                ch_bwameth_inputs.bwameth_index,
+                params.skip_deduplication || params.rrbs,
+                params.run_fragmentomics,
+                workflow.profile.tokenize(',').intersect(['gpu']).size() >= 1
+            )
+            ch_bam         = FASTQ_ALIGN_DEDUP_BWAMETH.out.bam
+            ch_bai         = FASTQ_ALIGN_DEDUP_BWAMETH.out.bai
+            ch_bedgraph    = FASTQ_ALIGN_DEDUP_BWAMETH.out.methydackel_extract_bedgraph
+            ch_aligner_mqc = FASTQ_ALIGN_DEDUP_BWAMETH.out.multiqc
+            ch_versions    = ch_versions.mix(FASTQ_ALIGN_DEDUP_BWAMETH.out.versions)
+        }
+        else {
+            error "ERROR: Invalid aligner '${params.aligner}'. Valid options are: 'bismark', 'bismark_hisat', or 'bwameth'"
+        }
+    }
     //
     // MODULE: Qualimap BamQC
     // skipped by default. to use run with `--run_qualimap` param.

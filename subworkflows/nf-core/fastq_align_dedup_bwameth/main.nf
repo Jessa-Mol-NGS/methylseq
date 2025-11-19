@@ -17,11 +17,9 @@ workflow FASTQ_ALIGN_DEDUP_BWAMETH {
     ch_fasta_index       // channel: [ val(meta), [ fasta index ] ]
     ch_bwameth_index     // channel: [ val(meta), [ bwameth index ] ]
     skip_deduplication   // boolean: whether to deduplicate alignments
-    run_fragmentomics    // boolean: whether to run fragmentomics pipeline (skip methylation extraction)
     use_gpu              // boolean: whether to use GPU or CPU for bwameth alignment
 
     main:
-
     ch_alignment                     = Channel.empty()
     ch_alignment_index               = Channel.empty()
     ch_samtools_flagstat             = Channel.empty()
@@ -121,28 +119,25 @@ workflow FASTQ_ALIGN_DEDUP_BWAMETH {
         ch_versions        = ch_versions.mix(SAMTOOLS_INDEX_DEDUPLICATED.out.versions)
     }
 
-    if (!run_fragmentomics) {
-        /*
-        * Extract per-base methylation and plot methylation bias
-        */
-        METHYLDACKEL_EXTRACT (
-            ch_alignment.join(ch_alignment_index),
-            ch_fasta.map{ meta, fasta_file -> fasta_file },
-            ch_fasta_index.map{ meta, fasta_index -> fasta_index }
-        )
-        ch_methydackel_extract_bedgraph  = METHYLDACKEL_EXTRACT.out.bedgraph
-        ch_methydackel_extract_methylkit = METHYLDACKEL_EXTRACT.out.methylkit
-        ch_versions                      = ch_versions.mix(METHYLDACKEL_EXTRACT.out.versions)
+    /*
+    * Extract per-base methylation and plot methylation bias
+    */
+    METHYLDACKEL_EXTRACT (
+        ch_alignment.join(ch_alignment_index),
+        ch_fasta.map{ meta, fasta_file -> fasta_file },
+        ch_fasta_index.map{ meta, fasta_index -> fasta_index }
+    )
+    ch_methydackel_extract_bedgraph  = METHYLDACKEL_EXTRACT.out.bedgraph
+    ch_methydackel_extract_methylkit = METHYLDACKEL_EXTRACT.out.methylkit
+    ch_versions                      = ch_versions.mix(METHYLDACKEL_EXTRACT.out.versions)
 
-        METHYLDACKEL_MBIAS (
-            ch_alignment.join(ch_alignment_index),
-            ch_fasta.map{ meta, fasta_file -> fasta_file },
-            ch_fasta_index.map{ meta, fasta_index -> fasta_index }
-        )
-        ch_methydackel_mbias = METHYLDACKEL_MBIAS.out.txt
-        ch_versions          = ch_versions.mix(METHYLDACKEL_MBIAS.out.versions)
-
-    }
+    METHYLDACKEL_MBIAS (
+        ch_alignment.join(ch_alignment_index),
+        ch_fasta.map{ meta, fasta_file -> fasta_file },
+        ch_fasta_index.map{ meta, fasta_index -> fasta_index }
+    )
+    ch_methydackel_mbias = METHYLDACKEL_MBIAS.out.txt
+    ch_versions          = ch_versions.mix(METHYLDACKEL_MBIAS.out.versions)
 
     /*
     * Collect MultiQC inputs

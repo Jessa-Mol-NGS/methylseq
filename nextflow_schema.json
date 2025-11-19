@@ -151,7 +151,6 @@
                 },
                 "use_mem2": {
                     "type": "boolean",
-                    "default": false,
                     "description": "Use BWA-MEM2 algorithm for BWA-Meth indexing and alignment.",
                     "fa_icon": "fas fa-forward",
                     "help_text": "When using the BWA-Meth aligner (`--aligner bwameth`), this parameter enables the BWA-MEM2 algorithm which can provide improved performance and accuracy. The BWA-MEM2 algorithm is a drop-in replacement for BWA-MEM that is generally faster and more accurate. This option only applies when using BWA-Meth aligner."
@@ -223,7 +222,7 @@
                     "description": "Method for UMI extraction.",
                     "default": "regex",
                     "enum": ["regex", "string"],
-                    "fa_icon": "fas fa-code-branch",
+                    "fa_icon": "fas fa-cut",
                     "help_text": "Specify the method used for UMI extraction. 'regex' allows for complex patterns using regular expressions, while 'string' uses a simpler string matching approach."
                 },
                 "bc_pattern": {
@@ -249,19 +248,16 @@
                 "adapter": {
                     "type": "string",
                     "description": "Custom adapter sequence for read 1.",
-                    "default": null,
                     "fa_icon": "fas fa-ad"
                 },
                 "adapter_r2": {
                     "type": "string",
                     "description": "Custom adapter sequence for read 2 (paired-end only).",
-                    "default": null,
                     "fa_icon": "fas fa-ad"
                 },
                 "stringency_trim": {
                     "type": "integer",
                     "description": "Overlap length required to trim adapters.",
-                    "default": null,
                     "fa_icon": "fas fa-arrows-alt-h"
                 },
                 "clip_r1": {
@@ -296,7 +292,8 @@
                 "quality_trim": {
                     "type": "integer",
                     "default": 20,
-                    "description": "Trim low-quality bases from the 3' end of the read below this quality value."
+                    "description": "Trim low-quality bases from the 3' end of the read below this quality value.",
+                    "fa_icon": "fas fa-cut"
                 },
                 "length_trim": {
                     "type": "integer",
@@ -306,7 +303,6 @@
                 "skip_trimming_presets": {
                     "type": "boolean",
                     "description": "Skip presetting trimming parameters entirely",
-                    "default": false,
                     "fa_icon": "fas fa-dot-circle"
                 }
             },
@@ -509,6 +505,34 @@
                 }
             }
         },
+        "fragmentomics_subworkflow_options": {
+            "title": "Fragmentomics Subworkflow Options",
+            "type": "object",
+            "description": "Fragmentomics analysis configurations. They need `--run_fragmentomics` to have an effect",
+            "default": "",
+            "properties": {
+                "include_quality_scores": {
+                    "type": "boolean",
+                    "description": "Include base quality scores in the fragmentomics output",
+                    "help_text": "Instructs the pipeline to extract base quality scores from the aligned reads",
+                    "fa_icon": "far fa-check-circle",
+                    "default": true
+                },
+                "include_reference_sequence": {
+                    "type": "boolean",
+                    "description": "Include reference sequences to which the reads map in the fragmentomics output",
+                    "help_text": "Instructs the pipeline to extract the parts of the reference sequence to which the reads map",
+                    "fa_icon": "far fa-check-circle",
+                    "default": true
+                },
+                "reconstruct_inserts": {
+                    "type": "boolean",
+                    "description": "Reconstruct the full insert from paired-end reads that overlap",
+                    "help_text": "Instructs the pipeline to reconstruct the full insert from paired-end reads that overlap",
+                    "fa_icon": "far fa-check-circle"
+                }
+            }
+        },
         "skip_pipeline_steps": {
             "title": "Skip pipeline steps",
             "type": "object",
@@ -560,14 +584,19 @@
                     "description": "Run advanced analysis for targeted methylation kits with enrichment of specific regions",
                     "fa_icon": "fas fa-fast-forward"
                 },
+                "run_umi_extraction": {
+                    "type": "boolean",
+                    "description": "Extract UMI's from the reads prior to alignemnt",
+                    "fa_icon": "fas fa-fast-forward"
+                },
                 "run_umi_deduplication": {
                     "type": "boolean",
-                    "description": "Run UMI-based deduplication using UMI-tools for extraction and Bismark for deduplication",
+                    "description": "Run UMI-based deduplication using Bismark",
                     "fa_icon": "fas fa-fast-forward"
                 },
                 "run_fragmentomics": {
                     "type": "boolean",
-                    "description": "Produce output relevant for fragmentomics analyses, but skip methylation calling steps",
+                    "description": "Produce output relevant for fragmentomics analyses and skip methylation calling steps",
                     "fa_icon": "fas fa-fast-forward"
                 }
             },
@@ -752,6 +781,9 @@
         },
         {
             "$ref": "#/$defs/targeted_sequencing_analysis_options"
+        },
+        {
+            "$ref": "#/$defs/fragmentomics_subworkflow_options"
         },
         {
             "$ref": "#/$defs/skip_pipeline_steps"
