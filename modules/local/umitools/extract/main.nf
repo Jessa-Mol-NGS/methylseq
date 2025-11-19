@@ -12,7 +12,8 @@ process UMITOOLS_EXTRACT {
 
     output:
     tuple val(meta), path("*umi_trimmed.fastq.gz"), emit: reads
-    path "versions.yml"           , emit: versions
+    tuple val(meta), path("*.log")                , emit: log              
+    path "versions.yml"                           , emit: versions
 
     when:
     task.ext.when == null || task.ext.when
@@ -26,7 +27,8 @@ process UMITOOLS_EXTRACT {
         umi_tools extract \\
             ${args} \\
             --stdin=${prefix}_UMI.fastq.gz \\
-            --stdout=${prefix}_temp.fastq
+            --stdout=${prefix}_temp.fastq \\
+            --log=${prefix}_UMI_extract.log
         sed -r '1~4 s/^(@.*)-([ACTGN]{3})(.*)/\\1\\3:\\2/' ${prefix}_temp.fastq | gzip > ${prefix}_umi_trimmed.fastq.gz
 
         cat <<-END_VERSIONS > versions.yml
@@ -42,7 +44,8 @@ process UMITOOLS_EXTRACT {
         umi_tools extract \\
             ${args} \\
             --stdin=${prefix}_UMI_R1.fastq.gz --read2-in=${prefix}_UMI_R2.fastq.gz \\
-            --stdout=${prefix}_R1_temp.fastq --read2-out=${prefix}_R2_temp.fastq
+            --stdout=${prefix}_R1_temp.fastq --read2-out=${prefix}_R2_temp.fastq \\
+            --log=${prefix}_UMI_extract.log
         sed -r '1~4 s/^(@.*)-([ACTGN]{6})(.*)/\\1\\3:\\2/' ${prefix}_R1_temp.fastq | gzip > ${prefix}_R1_umi_trimmed.fastq.gz
         sed -r '1~4 s/^(@.*)-([ACTGN]{6})(.*)/\\1\\3:\\2/' ${prefix}_R2_temp.fastq | gzip > ${prefix}_R2_umi_trimmed.fastq.gz
 
@@ -63,6 +66,7 @@ process UMITOOLS_EXTRACT {
         echo '' | gzip > ${prefix}_R1_umi_trimmed.fastq.gz
         echo '' | gzip > ${prefix}_R2_umi_trimmed.fastq.gz
     }
+    touch ${prefix}_UMI_extract.log
 
     cat <<-END_VERSIONS > versions.yml
     "${task.process}":

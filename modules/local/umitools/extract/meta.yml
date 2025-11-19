@@ -37,10 +37,21 @@ output:
           Groovy Map containing sample information
           e.g. `[ id:'sample1' ]`
     - "*.fastq.gz":
-        type: map
+        type: file
         description: |
           Groovy Map containing UMI-trimmed FastQ file(s)
         pattern: "*.fastq.gz"
+  log:
+  - - meta:
+        type: map
+        description: |
+          Groovy Map containing sample information
+          e.g. `[ id:'sample1' ]`
+    - "*.log":
+        type: file
+        description: |
+          Logfile for umitools extract
+        pattern: "*.log"
   versions:
   - versions.yml:
       type: file
