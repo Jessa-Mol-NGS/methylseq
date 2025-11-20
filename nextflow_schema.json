@@ -550,6 +550,11 @@
                     "help_text": "Deduplication removes PCR duplicate reads after alignment. Specifying this option will skip this step, leaving duplicate reads in your data.\n\nNote that this is turned on automatically if `--rrbs` is specified.",
                     "fa_icon": "fas fa-fast-forward"
                 },
+                "skip_methylomics": {
+                    "type": "boolean",
+                    "description": "Skip methylatomics data extraction",
+                    "fa_icon": "fas fa-fast-forward"
+                },
                 "skip_fastqc": {
                     "type": "boolean",
                     "description": "Skip FastQC",
@@ -572,35 +577,35 @@
                 "run_preseq": {
                     "type": "boolean",
                     "description": "Run preseq/lcextrap tool",
-                    "fa_icon": "fas fa-fast-forward"
+                    "fa_icon": "fas fa-forward"
                 },
                 "run_qualimap": {
                     "type": "boolean",
                     "description": "Run qualimap/bamqc tool",
-                    "fa_icon": "fas fa-fast-forward"
+                    "fa_icon": "fas fa-forward"
                 },
                 "run_targeted_sequencing": {
                     "type": "boolean",
                     "description": "Run advanced analysis for targeted methylation kits with enrichment of specific regions",
-                    "fa_icon": "fas fa-fast-forward"
+                    "fa_icon": "fas fa-forward"
                 },
                 "run_umi_extraction": {
                     "type": "boolean",
                     "description": "Extract UMI's from the reads prior to alignemnt",
-                    "fa_icon": "fas fa-fast-forward"
+                    "fa_icon": "fas fa-forward"
                 },
                 "run_umi_deduplication": {
                     "type": "boolean",
                     "description": "Run UMI-based deduplication using Bismark",
-                    "fa_icon": "fas fa-fast-forward"
+                    "fa_icon": "fas fa-forward"
                 },
                 "run_fragmentomics": {
                     "type": "boolean",
                     "description": "Produce output relevant for fragmentomics analyses and skip methylation calling steps",
-                    "fa_icon": "fas fa-fast-forward"
+                    "fa_icon": "fas fa-forward"
                 }
             },
-            "fa_icon": "fas fa-fast-forward"
+            "fa_icon": "fas fa-forward"
         },
         "institutional_config_options": {
             "title": "Institutional config options",
@@ -792,10 +797,10 @@
             "$ref": "#/$defs/run_pipeline_steps"
         },
         {
-            "$ref": "#/$defs/generic_options"
+            "$ref": "#/$defs/institutional_config_options"
         },
         {
-            "$ref": "#/$defs/institutional_config_options"
+            "$ref": "#/$defs/generic_options"
         }
     ]
 }

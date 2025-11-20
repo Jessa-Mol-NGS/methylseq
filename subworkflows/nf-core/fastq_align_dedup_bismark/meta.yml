@@ -20,6 +20,8 @@ components:
   - bismark/coverage2cytosine
   - bismark/report
   - bismark/summary
+  - samtools/view
+  - fragmentomics
 input:
   - ch_reads:
       description: |
@@ -48,7 +50,7 @@ input:
   - run_fragmentomics:
       type: boolean
       description: |
-        Skip methylation extraction steps for fragmentomics analysis
+        Extract insert sizes and other data relevant for fragmentomics analysis
 output:
   - bam:
       type: file
@@ -122,6 +124,12 @@ output:
         Channel containing Bismark summary report.
         Structure: [ val(meta), path(bismark_summary.txt) ]
       pattern: "*report.{html,txt}"
+  - insert_sizes:
+      type: file
+      description: |
+        Channel containing insert sizes and sequences.
+        Structure: [ val(meta), path(insert_sizes.csv.gz) ]
+      pattern: "*insert.sizes.csv.gz"
   - multiqc:
       type: file
       description: |

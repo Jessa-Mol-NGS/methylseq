@@ -1,13 +1,16 @@
-include { BWAMETH_ALIGN                                 } from '../../../modules/nf-core/bwameth/align/main'
-include { PARABRICKS_FQ2BAMMETH                         } from '../../../modules/nf-core/parabricks/fq2bammeth/main'
-include { SAMTOOLS_SORT                                 } from '../../../modules/nf-core/samtools/sort/main'
-include { SAMTOOLS_INDEX as SAMTOOLS_INDEX_ALIGNMENTS   } from '../../../modules/nf-core/samtools/index/main'
-include { SAMTOOLS_FLAGSTAT                             } from '../../../modules/nf-core/samtools/flagstat/main'
-include { SAMTOOLS_STATS                                } from '../../../modules/nf-core/samtools/stats/main'
-include { PICARD_MARKDUPLICATES                         } from '../../../modules/nf-core/picard/markduplicates/main'
-include { SAMTOOLS_INDEX as SAMTOOLS_INDEX_DEDUPLICATED } from '../../../modules/nf-core/samtools/index/main'
-include { METHYLDACKEL_EXTRACT                          } from '../../../modules/nf-core/methyldackel/extract/main'
-include { METHYLDACKEL_MBIAS                            } from '../../../modules/nf-core/methyldackel/mbias/main'
+include { BWAMETH_ALIGN                                  } from '../../../modules/nf-core/bwameth/align/main'
+include { PARABRICKS_FQ2BAMMETH                          } from '../../../modules/nf-core/parabricks/fq2bammeth/main'
+include { SAMTOOLS_SORT                                  } from '../../../modules/nf-core/samtools/sort/main'
+include { SAMTOOLS_INDEX as SAMTOOLS_INDEX_ALIGNMENTS    } from '../../../modules/nf-core/samtools/index/main'
+include { SAMTOOLS_FLAGSTAT                              } from '../../../modules/nf-core/samtools/flagstat/main'
+include { SAMTOOLS_STATS                                 } from '../../../modules/nf-core/samtools/stats/main'
+include { PICARD_MARKDUPLICATES                          } from '../../../modules/nf-core/picard/markduplicates/main'
+include { SAMTOOLS_INDEX as SAMTOOLS_INDEX_DEDUPLICATED  } from '../../../modules/nf-core/samtools/index/main'
+include { METHYLDACKEL_EXTRACT                           } from '../../../modules/nf-core/methyldackel/extract/main'
+include { METHYLDACKEL_MBIAS                             } from '../../../modules/nf-core/methyldackel/mbias/main'
+include { SAMTOOLS_SORT as SAMTOOLS_SORT_NAME            } from '../../../modules/nf-core/samtools/sort/main'
+include { SAMTOOLS_VIEW as SAMTOOLS_VIEW_PROPERLY_PAIRED } from '../../../modules/nf-core/samtools/view/main'      
+include { FRAGMENTOMICS                                  } from '../../../modules/local/fragmentomics/main'
 
 workflow FASTQ_ALIGN_DEDUP_BWAMETH {
 
@@ -17,6 +20,7 @@ workflow FASTQ_ALIGN_DEDUP_BWAMETH {
     ch_fasta_index       // channel: [ val(meta), [ fasta index ] ]
     ch_bwameth_index     // channel: [ val(meta), [ bwameth index ] ]
     skip_deduplication   // boolean: whether to deduplicate alignments
+    run_fragmentomics    // boolean: whether to run fragmentomics workflow
     use_gpu              // boolean: whether to use GPU or CPU for bwameth alignment
 
     main:
@@ -28,6 +32,7 @@ workflow FASTQ_ALIGN_DEDUP_BWAMETH {
     ch_methydackel_extract_methylkit = Channel.empty()
     ch_methydackel_mbias             = Channel.empty()
     ch_picard_metrics                = Channel.empty()
+    ch_insert_sizes                  = Channel.empty()
     ch_multiqc_files                 = Channel.empty()
     ch_versions                      = Channel.empty()
 
@@ -140,6 +145,50 @@ workflow FASTQ_ALIGN_DEDUP_BWAMETH {
     ch_versions          = ch_versions.mix(METHYLDACKEL_MBIAS.out.versions)
 
     /*
+    * Execute fragmentomics workflow if requested
+    */
+    if (run_fragmentomics) {    
+        /*
+        * Fragmentomics workflow is only intended for paired-end reads
+        */
+        ch_alignment_branched = ch_alignment
+            .branch { meta, bam ->
+                    single_end : meta.single_end
+                        return [ meta, bam ]
+                    paired_end : !meta.single_end
+                        return [ meta, bam ]
+                }
+
+        /*
+        * Sort the BAM file by read name for insert size calculation
+        */
+        SAMTOOLS_SORT_NAME (
+            ch_alignment_branched.paired_end,
+            [[:], []] // [ [meta], [fasta]]        
+        )
+
+        /*
+        * Only keep properly paired reads for insert size calculation
+        */
+        SAMTOOLS_VIEW_PROPERLY_PAIRED (
+            SAMTOOLS_SORT_NAME.out.bam.map { meta, bam -> [ meta, bam, [] ] },
+            [[:], []], // [ [meta2], [fasta] ]
+            [], // [qname]
+            "" // [index_format]        
+        )
+        ch_versions = ch_versions.mix(SAMTOOLS_VIEW_PROPERLY_PAIRED.out.versions)
+
+        /* 
+        * Extract insert sizes and sequences 
+        */
+        FRAGMENTOMICS (
+            SAMTOOLS_VIEW_PROPERLY_PAIRED.out.bam
+        )
+        ch_insert_sizes = FRAGMENTOMICS.out.insert_sizes
+        ch_versions = ch_versions.mix(FRAGMENTOMICS.out.versions)    
+    }
+
+    /*
     * Collect MultiQC inputs
     */
     ch_multiqc_files = ch_picard_metrics.collect{ meta, metrics -> metrics }
@@ -157,6 +206,7 @@ workflow FASTQ_ALIGN_DEDUP_BWAMETH {
     methydackel_extract_methylkit = ch_methydackel_extract_methylkit // channel: [ val(meta), [ methylkit ] ]
     methydackel_mbias             = ch_methydackel_mbias             // channel: [ val(meta), [ mbias ]     ]
     picard_metrics                = ch_picard_metrics                // channel: [ val(meta), [ metrics ]   ]
+    insert_sizes                  = ch_insert_sizes                  // channel: [ val(meta), [ csv.gz ] ]
     multiqc                       = ch_multiqc_files                 // channel: [ *{html,txt}              ]
     versions                      = ch_versions                      // channel: [ versions.yml             ]
 }

@@ -114,34 +114,9 @@ workflow METHYLSEQ {
     }
 
     //
-    // SUBWORKFLOW: Align reads and deduplicate with Bismark, then extract fragmentomics data
+    // Alignment and deduplication steps, followed by extraction of fragmentomics and/or methylomoics data
     //
-    if (params.run_fragmentomics) {
-        ch_bismark_inputs = ch_reads_trimmed
-            .combine(ch_fasta)
-            .combine(ch_bismark_index)
-            .multiMap { meta, reads, meta_fasta, fasta, meta_bismark, bismark_index ->
-                reads: [ meta, reads ]
-                fasta: [ meta_fasta, fasta ]
-                bismark_index: [ meta_bismark, bismark_index ]
-            }
-        
-        FRAGMENTOMICS_ALIGN_DEDUP_BISMARK (
-            ch_bismark_inputs.reads,
-            ch_bismark_inputs.fasta,
-            ch_bismark_inputs.bismark_index,
-            params.skip_deduplication || params.rrbs,
-        )
-        ch_bam         = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.bam
-        ch_bai         = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.bai
-        ch_aligner_mqc = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.multiqc
-        ch_versions    = ch_versions.mix(FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.versions)
-    }
-
-    //
-    // SUBWORKFLOW: Align reads, deduplicate and extract methylation with Bismark
-    //
-    else {
+    if (!params.skip_methylomics) { 
         // Aligner: bismark or bismark_hisat
         if ( params.aligner =~ /bismark/ ) {
             //
@@ -203,6 +178,43 @@ workflow METHYLSEQ {
             error "ERROR: Invalid aligner '${params.aligner}'. Valid options are: 'bismark', 'bismark_hisat', or 'bwameth'"
         }
     }
+    //
+    // SUBWORKFLOW: Align reads and deduplicate with Bismark, then extract fragmentomics data
+    // skipped by default. to use run with `--run_fragmentomics` param.
+    //
+    else if (params.run_fragmentomics) {
+        if ( params.aligner =~ /bismark/ ) {
+            ch_bismark_inputs = ch_reads_trimmed
+            .combine(ch_fasta)
+            .combine(ch_bismark_index)
+            .multiMap { meta, reads, meta_fasta, fasta, meta_bismark, bismark_index ->
+                reads: [ meta, reads ]
+                fasta: [ meta_fasta, fasta ]
+                bismark_index: [ meta_bismark, bismark_index ]
+            }
+
+            
+            FRAGMENTOMICS_ALIGN_DEDUP_BISMARK (
+                ch_bismark_inputs.reads,
+                ch_bismark_inputs.fasta,
+                ch_bismark_inputs.bismark_index,
+                params.skip_deduplication || params.rrbs,
+            )
+            ch_bam         = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.bam
+            ch_bai         = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.bai
+            ch_aligner_mqc = FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.multiqc
+            ch_versions    = ch_versions.mix(FRAGMENTOMICS_ALIGN_DEDUP_BISMARK.out.versions)
+        }
+        else {
+            // TO DO: Implement fragmentomics workflow for bwameth alignment
+            error "ERROR: Aligner must be one of 'bismark', 'bismark_hisat' when running fragmentomics workflow, not '${params.aligner}'!"
+        }
+    }
+    else {
+        // TO DO: Implement subworkflow where reads are only aligned and deduplicated (potentially)
+        error "ERROR: Cannot skip methylomics workflow ('--skip_methylomics' was set) ánd disable fragmentomics workflow ('--run_fragmentomics' was not set)." 
+    }
+    
     //
     // MODULE: Qualimap BamQC
     // skipped by default. to use run with `--run_qualimap` param.
